@@ -23,8 +23,8 @@ import signal
 import codecs
 import ConfigParser
 
-# Logging
 from ..common.logthis import *
+from ..common.util import *
 
 # RCfile list
 rcfiles = [ './edparse.conf', '~/.edparse/edparse.conf', '~/.edparse', '/etc/edparse.conf' ]
@@ -228,5 +228,5 @@ def loadConfig(xtraConf=None,cliopts=None):
     rcfile,rci = parse(xtraConf)
     cxopt = optexpand(cliopts)
     optrc = merge(rci,cxopt)
-    __main__.xsetup.config = optrc
+    __main__.xsetup.config = XConfig(optrc)
     __main__.xsetup.lconfig = rcfile

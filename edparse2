@@ -23,9 +23,10 @@ import optparse
 from ed2.common.logthis import *
 from ed2.common.util import *
 from ed2.common import rcfile
+from ed2.modmaster import *
 
 class xsetup:
-    """Contains version information and globals"""
+    """Contains version information, globals, and running config"""
     ## Version info
     version = "0.10.0"
     vdate   = "20 Mar 2016"
@@ -35,11 +36,15 @@ class xsetup:
     lconfig = None
     defaults = {
                     'run': {
-                        'quiet': False
+                        'quiet': False,
+                        'list': False,
+                        'module': None,
+                        'modargs': None,
+                        'infile': None
                     },
                     'core': {
                         'loglevel': LL.INFO,
-                        'logfile': "edparse.log"
+                        'logfile': None
                     },
                     'redis': {
                         'host': "localhost",
@@ -50,7 +55,7 @@ class xsetup:
                     'mongo': {
                         'host': "localhost",
                         'port': 27017,
-                        'database': "ycplay"
+                        'database': "yc_edict"
                     },
                     'neo4j': {
                         'url': "http://localhost:7474/db/data/"
@@ -62,6 +67,8 @@ def show_banner():
     print ""
     print C.CYN, "*** ", C.WHT, "edparse2", C.OFF
     print C.CYN, "*** ", C.CYN, "Version " + xsetup.version + " (" + xsetup.vdate + ")", C.OFF
+    if xsetup.gitinfo.has_key('sref'):
+        print C.CYN, "*** ", C.BLU, "Commit " + xsetup.gitinfo['sref'] + " (" + xsetup.gitinfo['date'] + ")", C.OFF
     print C.CYN, "*** ", C.GRN, "Copyright (c) 2013-2016 J. Hipps / Neo-Retro Group, Inc.", C.OFF
     print C.CYN, "*** ", C.GRN, "J. Hipps <jacob@ycnrg.org>", C.OFF
     print C.CYN, "*** ", C.YEL, "https://ycnrg.org/", C.OFF
@@ -74,17 +81,27 @@ def parse_cli():
     Parse command-line options
     """
     global oparser
-    oparser = optparse.OptionParser(usage="%prog [options]",version=xsetup.version+" ("+xsetup.vdate+")")
+    oparser = optparse.OptionParser(usage="%prog [options] <MODNAME|-l> [-i INPUT]",version=xsetup.version+" ("+xsetup.vdate+")")
 
     # General options
     oparser.add_option('-v', '--verbose', action="count", dest="run.verbose", help="Increase logging verbosity (-v Verbose, -vv Debug, -vvv Debug2)")
     oparser.add_option('-L','--loglevel', action="store", dest="core.loglevel", default=False,metavar="NUM", help="Logging output verbosity (4=error,5=warning,6=info,7=verbose,8=debug,9=debug2)")
     oparser.add_option('-q', action="store_true", dest="run.quiet", default=False, help="Quiet - suppress log messages (use as first option)")
 
-    #oparser.add_option('-j','--json', action="store_true", dest="run.json", default=False, help="Output data as JSON")
+    oparser.add_option('-l','--list', action="store_true", dest="run.list", default=False, help="List available modules")
+
+    oparser.add_option('-i','--input', action="store", dest="run.infile", default=False, metavar="PATH", help="Input file or directory path")
 
     options, args = oparser.parse_args(sys.argv[1:])
     vout = vars(options)
+
+    if len(args) >= 1:
+        # module name is a positional argument
+        vout['run.module'] = args[0]
+    if len(args) >= 2:
+        # any additional pargs that were not parsed,
+        # pass them along to the module for the hell of it (might be useful sometime)
+        vout['run.modargs'] = args[1:]
 
     if vout['run.verbose']:
         vout['run.verbose'] += 6
@@ -104,12 +121,13 @@ def parse_cli():
 
 if __name__ == '__main__':
 
+    # Check git info
+    if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/.git'):
+        xsetup.gitinfo = git_info()
+
     # Show banner
     if len(sys.argv) < 2 or sys.argv[1] != '--version' and not (len(sys.argv[1]) > 1 and sys.argv[1][1] == 'q'):
         show_banner()
-
-    # Check git info
-    xsetup.gitinfo = git_info()
 
     # Set default loglevel
     loglevel(xsetup.defaults['core']['loglevel'])
@@ -117,10 +135,31 @@ if __name__ == '__main__':
     # parse CLI options and load running config
     xopt = parse_cli()
     rcfile.loadConfig(cliopts=xopt)
-    loglevel(xsetup.config['core']['loglevel'])
-    openlog(xsetup.config['core']['logfile'])
+    loglevel(xsetup.config.core.logfile)
+    if xsetup.config.core.logfile:
+        openlog(xsetup.config.core.logfile)
 
     # Set quiet exception handler for non-verbose operation
-    if xsetup.config['core']['loglevel'] < LL.VERBOSE:
+    if xsetup.config.core.logfile < LL.VERBOSE:
         sys.excepthook = exceptionHandler
 
+    # Load modules
+    loadModules()
+
+    retval = 0
+    if xsetup.config.run.list:
+        # Show list of available modules
+        modlist = getModuleList()
+        print "** Available modules:\n"
+        for tm in modlist:
+            print "%-24s %s [%s]" % (tm['name'],tm['desc'],tm['author'])
+        print ""
+    elif xsetup.config.run.module:
+        # Run the specified module
+        retval = runModule(xsetup.config.run.module, xsetup.config)
+    else:
+        # Show usage if no valid mode was set
+        oparser.print_help()
+        retval = 1
+
+    sys.exit(retval)

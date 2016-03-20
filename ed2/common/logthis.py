@@ -78,7 +78,9 @@ class ER:
     NOTFOUND    = 5
     UNSUPPORTED = 6
     DEPMISSING  = 7
-    NOTIMPL      = 8
+    NOTIMPL     = 8
+    MODERROR    = 9
+    MODNOTFOUND = 10
     lname = {
                 0: 'none',
                 1: 'opt_missing',
@@ -89,6 +91,8 @@ class ER:
                 6: 'unsupported',
                 7: 'depmissing',
                 8: 'notimpl',
+                9: 'moderror',
+                10: 'modnotfound'
             }
 
 class xbError(Exception):
