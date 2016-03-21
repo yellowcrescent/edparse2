@@ -28,8 +28,8 @@ from ed2.modmaster import *
 class xsetup:
     """Contains version information, globals, and running config"""
     ## Version info
-    version = "0.10.0"
-    vdate   = "20 Mar 2016"
+    version = "0.20.1"
+    vdate   = "21 Mar 2016"
 
     gitinfo = {}
     config = None
@@ -40,7 +40,8 @@ class xsetup:
                         'list': False,
                         'module': None,
                         'modargs': None,
-                        'infile': None
+                        'infile': None,
+                        'json': None
                     },
                     'core': {
                         'loglevel': LL.INFO,
@@ -91,6 +92,7 @@ def parse_cli():
     oparser.add_option('-l','--list', action="store_true", dest="run.list", default=False, help="List available modules")
 
     oparser.add_option('-i','--input', action="store", dest="run.infile", default=False, metavar="PATH", help="Input file or directory path")
+    oparser.add_option('-j','--json', action="store", dest="run.json", default=False, metavar="PATH", help="Dump output to JSON file")
 
     options, args = oparser.parse_args(sys.argv[1:])
     vout = vars(options)
@@ -140,7 +142,7 @@ if __name__ == '__main__':
         openlog(xsetup.config.core.logfile)
 
     # Set quiet exception handler for non-verbose operation
-    if xsetup.config.core.logfile < LL.VERBOSE:
+    if xsetup.config.core.loglevel < LL.VERBOSE:
         sys.excepthook = exceptionHandler
 
     # Load modules
