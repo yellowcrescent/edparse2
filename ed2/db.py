@@ -37,21 +37,21 @@ class mongo:
     """Hotamod class for handling Mongo stuffs"""
     xcon = None
     xcur = None
-    conndata = {}
     silence = False
+    db = None
 
-    def __init__(self, cdata={}, silence=False):
+    def __init__(self, uri, silence=False):
         """Initialize and connect to MongoDB"""
         self.silence = silence
-        if cdata:
-            self.conndata = cdata
+
         try:
-            self.xcon = pymongo.MongoClient()
+            self.xcon = pymongo.MongoClient(uri)
+            self.db = uri.split('/')[-1]
         except Exception as e:
             logthis("Failed connecting to Mongo --",loglevel=LL.ERROR,suffix=e)
             return False
 
-        self.xcur = self.xcon[self.conndata['database']]
+        self.xcur = self.xcon[self.db]
         if not self.silence: logthis("Connected to Mongo OK",loglevel=LL.INFO,ccode=C.GRN)
 
     def find(self, collection, query):
@@ -70,9 +70,10 @@ class mongo:
 
     def upsert(self, collection, monid, indata):
         try:
-            self.xcur[collection].update({'_id': monid}, indata, upsert=True)
+            return self.xcur[collection].update({'_id': monid}, indata, upsert=True)
         except Exception as e:
             logthis("Failed to upsert document in Mongo --",loglevel=LL.ERROR,suffix=e)
+            return None
 
     def findOne(self, collection, query):
         return self.xcur[collection].find_one(query)

@@ -32,10 +32,25 @@ from ed2.common.logthis import *
 from ed2.common.util import *
 from ed2.db import *
 
+# input file target list
 targets = ["jmdict","jmnedict","kradfile","kradfile2","kanjidic"]
 
-krdex  = {}
+# priority index lookup table
+priodex = {
+            'ichi1': 40, 'ichi2': 30, 'news1': 20, 'news2': 15, 'spec1': 30,
+            'spec2': 15, 'gai1': 60, 'gai2': 45, 'nf01': 500, 'nf02': 495,
+            'nf03': 495, 'nf04': 495, 'nf05': 490, 'nf06': 490, 'nf07': 480,
+            'nf08': 480, 'nf09': 470, 'nf10': 470, 'nf11': 450, 'nf12': 440,
+            'nf13': 430, 'nf14': 420, 'nf15': 410, 'nf16': 400, 'nf17': 390,
+            'nf18': 380, 'nf19': 370, 'nf20': 350, 'nf21': 340, 'nf22': 330,
+            'nf23': 320, 'nf24': 310, 'nf25': 300, 'nf26': 290, 'nf27': 280,
+            'nf28': 270, 'nf29': 260, 'nf30': 250, 'nf31': 240, 'nf32': 230,
+            'nf33': 220, 'nf34': 210, 'nf35': 200, 'nf36': 180, 'nf37': 170,
+            'nf38': 165, 'nf39': 145, 'nf40': 120, 'nf41': 100, 'nf42': 95,
+            'nf43': 90, 'nf44': 75, 'nf45': 60, 'nf46': 45, 'nf47': 30, 'nf48': 15
+          }
 
+krdex  = {}
 
 def run(xconfig):
     """edparser entry point"""
@@ -97,10 +112,55 @@ def run(xconfig):
             logexc(e,"Failed to dump output to JSON file")
             failwith(ER.PROCFAIL,"File operation failed. Aborting.")
     else:
-        # TODO: implement MongoDB interface
-        pass
+        # MongoDB
+        update_mongo(xconfig.mongo.uri,kdex,jmdict,nedict)
 
     return 0
+
+
+def update_mongo(mongo_uri,kdex,jmdict,nedict):
+    """
+    Insert, upsert, or update entries in MongoDB
+    """
+    # connect to mongo
+    logthis("Connecting to",suffix=mongo_uri,loglevel=LL.INFO)
+    mdx = mongo(mongo_uri)
+
+    # Kanji
+    update_set(mdx, kdex, 'kanji')
+
+    # JMDict
+    update_set(mdx, jmdict, 'jmdict')
+
+    # JMnedict
+    update_set(mdx, nedict, 'jmnedict')
+
+
+def update_set(mdx,indata,setname):
+    """
+    merge each existing entry with new entry
+    """
+    updated = 0
+    created = 0
+
+    logthis(">> Updating collection:",suffix=setname,loglevel=LL.INFO)
+
+    for tk,tv in indata.iteritems():
+        xkan = mdx.findOne(setname, { '_id': tk })
+        if xkan:
+            # modify existing object with new data
+            iobj = xkan
+            iobj.update(tv)
+        else:
+            iobj = tv
+
+        if mdx.upsert(setname, tk, iobj)['updatedExisting']:
+            updated += 1
+        else:
+            created += 1
+
+    logthis("update complete - updated: %d / created: %d / total:" % (updated,created),prefix=setname,suffix=(updated+created),loglevel=LL.INFO)
+
 
 def parse_kradfile(krfile,encoding='euc-jp'):
     """
@@ -164,13 +224,11 @@ def parse_kanjidic(kdfile):
             misc = elem.find('misc')
 
             # grade/joyo level
+            # NEW: now returns an integer; for hyougaji kanji, this will be zero
             if misc.find('grade') is not None:
-                curEntry['grade'] = misc.find('grade').text
+                curEntry['grade'] = int(misc.find('grade').text)
             else:
-                # TODO: at some point, this should be fixed, but lots of stuff
-                # now relies on grade being an empty string instead of zero or null
-                # if it lies outside of the joyo kanji
-                curEntry['grade'] = ''
+                curEntry['grade'] = 0
 
             # stroke_count
             # NEW: this will now *always* be an array of ints, whereas before it was
@@ -300,6 +358,7 @@ def parse_jmdict(kdfile,seqbase=3000000):
             curEntry['_id'] = curEntry['ent_seq']
 
             ## k_ele
+            kf_pmax = 0
             if elem.find('k_ele') is not None:
                 curEntry['k_ele'] = []
                 for sv in elem.findall('k_ele'):
@@ -319,11 +378,14 @@ def parse_jmdict(kdfile,seqbase=3000000):
                         if not kele.has_key('ke_pri'):
                             kele['ke_pri'] = []
                         kele['ke_pri'].append(ssv.text)
-                        # TODO: calculate priodex (kf_pmax)
+                        kf_pmax += priodex[ssv.text]
 
                     curEntry['k_ele'].append(kele)
 
+            curEntry['kf_pmax'] = kf_pmax
+
             ## r_ele
+            rf_pmax = 0
             if elem.find('r_ele') is not None:
                 curEntry['r_ele'] = []
                 for sv in elem.findall('r_ele'):
@@ -353,9 +415,11 @@ def parse_jmdict(kdfile,seqbase=3000000):
                         if not rele.has_key('re_pri'):
                             rele['re_pri'] = []
                         rele['re_pri'].append(ssv.text)
-                        # TODO: calculate priodex (rf_pmax)
+                        rf_pmax += priodex[ssv.text]
 
                     curEntry['r_ele'].append(rele)
+
+            curEntry['rf_pmax'] = rf_pmax
 
             ## sense (JMDict)
             if elem.find('sense') is not None:
