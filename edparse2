@@ -39,9 +39,10 @@ class xsetup:
                         'quiet': False,
                         'list': False,
                         'module': None,
-                        'modargs': None,
+                        'modargs': [],
                         'infile': None,
-                        'json': None
+                        'json': None,
+                        'output': None
                     },
                     'core': {
                         'loglevel': LL.INFO,
@@ -90,6 +91,7 @@ def parse_cli():
     oparser.add_option('-l','--list', action="store_true", dest="run.list", default=False, help="List available modules")
 
     oparser.add_option('-i','--input', action="store", dest="run.infile", default=False, metavar="PATH", help="Input file or directory path")
+    oparser.add_option('-o','--output', action="store", dest="run.output", default=False, metavar="PATH", help="Output file, path, or resource URI")
     oparser.add_option('-j','--json', action="store", dest="run.json", default=False, metavar="PATH", help="Dump output to JSON file")
 
     options, args = oparser.parse_args(sys.argv[1:])

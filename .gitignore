@@ -6,3 +6,4 @@ edparse.conf
 fonts
 *.pid
 *.log
+data
