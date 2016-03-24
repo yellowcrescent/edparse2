@@ -179,7 +179,7 @@ def logthis(logline,loglevel=LL.DEBUG,prefix=None,suffix=None,ccode=None):
 def logexc(e,msg,prefix=None):
     """log exception"""
     if msg: msg += ": "
-    suffix = C.WHT + "[" + C.YEL + str(e.__class__.__name__) + C.WHT + "] " + C.YEL + str(e)
+    suffix = C.WHT + "[" + C.YEL + str(e.__class__.__name__) + C.WHT + "] " + C.YEL + unicode(e)
     logthis(msg,LL.ERROR,prefix,suffix)
 
 def openlog(fname="rainwatch.log"):
