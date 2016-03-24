@@ -58,7 +58,7 @@ class xsetup:
                         'uri': "mongodb://localhost:27017/yc_edict",
                     },
                     'neo4j': {
-                        'url': "http://localhost:7474/db/data/"
+                        'uri': "http://localhost:7474/db/data/"
                     }
                }
 

@@ -122,3 +122,39 @@ def git_info():
             logexc(e, "Unable to parse output from git")
 
     return rvx
+
+
+def setMerge(a,b):
+    """merge two dicts; create a list when multiple (different) values exist"""
+    # create set A
+    seta = set()
+    for ak,av in a.iteritems(): seta.add('%s\\\\\\%s' % (ak,json.dumps(av)))
+
+    # create set B
+    setb = set()
+    for bk,bv in b.iteritems(): setb.add('%s\\\\\\%s' % (bk,json.dumps(bv)))
+
+    # create union
+    setc = list(seta.union(setb))
+
+    # rebuild output dict
+    outd = {}
+    for tx in setc:
+        tk,tv = tx.split('\\\\\\')
+        tvd = json.loads(tv)
+        logthis(">[%s]" % (tk),suffix=tvd,loglevel=LL.DEBUG2)
+        if outd.has_key(tk):
+            if isinstance(outd[tk], list):
+                if isinstance(tvd, list):
+                    outd[tk] = outd[tk] + tvd
+                else:
+                    outd[tk] = outd[tk] + [ tvd ]
+            else:
+                if isinstance(tvd, list):
+                    outd[tk] = [ outd[tk] ] + tvd
+                else:
+                    outd[tk] = [ outd[tk] ] + [ tvd ]
+        else:
+            outd[tk] = tvd
+
+    return outd

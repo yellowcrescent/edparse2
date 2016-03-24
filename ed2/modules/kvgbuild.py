@@ -169,11 +169,21 @@ def run(xconfig):
                         if tg.parent.parent.attrs.has_key('position'):
                             trad['position'] = tg.parent.parent.attrs.get('position',None)
 
-                radlist[trad['original']] = trad
+                # handle kanji with multiple instances of the same radical
+                if radlist.has_key(trad['original']):
+                    logthis("---- MERGE:\n%s" % (print_r(radlist[trad['original']])),ccode=C.WHT,loglevel=LL.DEBUG)
+                    # merge sets
+                    radlist[trad['original']] = setMerge(radlist[trad['original']], trad)
+                    # create a 'count' key and increment it
+                    if radlist[trad['original']].has_key('count'):
+                        radlist[trad['original']]['count'] = int(radlist[trad['original']]['count']) + 1
+                    else:
+                        radlist[trad['original']]['count'] = 2
+                else:
+                    radlist[trad['original']] = trad
 
             mdx.update_set('kanji', "%x" % ord(kanji), { 'xrad': radlist } )
             logthis("** Committed entry:\n",suffix=print_r(radlist),loglevel=LL.DEBUG)
-
 
 
 def openKvg(infile):
