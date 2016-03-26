@@ -28,7 +28,7 @@ from ed2.modmaster import *
 class xsetup:
     """Contains version information, globals, and running config"""
     ## Version info
-    version = "0.20.3"
+    version = "0.20.4"
     vdate   = "25 Mar 2016"
 
     gitinfo = {}
