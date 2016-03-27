@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 setup(
     name = "edparse2",
-    version = "0.20.4",
+    version = "0.20.5",
     author = "Jacob Hipps",
     author_email = "jacob@ycnrg.org",
     license = "MIT",

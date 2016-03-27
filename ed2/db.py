@@ -54,11 +54,14 @@ class mongo:
         self.xcur = self.xcon[self.db]
         if not self.silence: logthis("Connected to Mongo OK",loglevel=LL.INFO,ccode=C.GRN)
 
-    def find(self, collection, query):
+    def find(self, collection, query, rdict=False):
         xresult = {}
         xri = 0
         for tresult in self.xcur[collection].find(query):
-            xresult[xri] = tresult
+            if rdict:
+                xresult[tresult['_id']] = tresult
+            else:
+                xresult[xri] = tresult
             xri += 1
         return xresult
 
