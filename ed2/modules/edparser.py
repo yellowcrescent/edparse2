@@ -33,7 +33,7 @@ from ed2.common.util import *
 from ed2.db import *
 
 # input file target list
-targets = ["jmdict","jmnedict","kradfile","kradfile2","kanjidic"]
+targets = ("jmdict","jmnedict","kradfile2","kradfile","kanjidic")
 
 # priority index lookup table
 priodex = {
